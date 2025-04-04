@@ -125,21 +125,6 @@ function init() {
 
 // 启动处理流程
 document.addEventListener('DOMContentLoaded', init);
-    window.addEventListener('load', () => {
-    // 添加视觉反馈
-    document.body.style.background = '#1a1a1a';
-    document.body.innerHTML = `
-        <div style="color: white; text-align: center; padding: 20px;">
-            <p>操作已完成，窗口将在3秒后关闭...</p>
-            <button onclick="safeCloseWindow()" 
-                style="padding: 10px 20px; background: #555; border: none; color: white;">
-                立即关闭
-            </button>
-        </div>
-    `;
-
-    // 自动关闭倒计时
-    setTimeout(safeCloseWindow, 3000);
 });
 </script>
 </body>
