@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>邮箱验证码转发系统</title>
+    <meta charset="UTF-8">
+    <style>
+        .status-box {
+            padding: 20px;
+            margin: 50px auto;
+            width: 60%;
+            border-radius: 8px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div id="status" class="status-box"></div>
+
+<script>
+// 异或解密函数（与Python实现兼容）
+function xorDecrypt(base64Str, key) {
+    try {
+        const encrypted = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0))
+        if (!key) return new TextDecoder().decode(encrypted)
+        
+        const keyBytes = new TextEncoder().encode(key)
+        const decrypted = new Uint8Array(encrypted.length)
+        for (let i = 0; i < encrypted.length; i++) {
+            decrypted[i] = encrypted[i] ^ keyBytes[i % keyBytes.length]
+        }
+        return new TextDecoder().decode(decrypted)
+    } catch (e) {
+        console.error('解密失败:', e)
+        return null
+    }
+}
+
+// 邮箱格式验证
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+// 验证码格式验证（6位数字）
+function isValidCode(code) {
+    return /^\d{6}$/.test(code)
+}
+
+// 获取URL参数
+function getParam(name) {
+    return new URLSearchParams(window.location.search).get(name)
+}
+
+// 显示状态信息
+function showStatus(message, isSuccess) {
+    const statusDiv = document.getElementById('status')
+    statusDiv.className = `status-box ${isSuccess ? 'success' : 'error'}`
+    statusDiv.innerHTML = `<h2>${isSuccess ? '✅ 成功' : '❌ 错误'}</h2><p>${message}</p>`
+}
+
+// 主处理流程
+async function processRequest() {
+    // 从URL获取参数（示例密钥，实际应保密）
+    const SECRET_KEY = 'V3ryS3cretK3y!2024'
+    
+    try {
+        // 解密参数
+        const encryptedEmail = getParam('b')
+        const encryptedCode = getParam('a')
+        
+        if (!encryptedEmail || !encryptedCode) {
+            throw new Error('缺少必要参数')
+        }
+
+        const email = xorDecrypt(encryptedEmail, SECRET_KEY)
+        const code = xorDecrypt(encryptedCode, SECRET_KEY)
+
+        // 验证解密结果
+        if (!email || !code) throw new Error('解密失败')
+        if (!isValidEmail(email)) throw new Error('邮箱格式无效')
+        if (!isValidCode(code)) throw new Error('验证码格式无效')
+
+        // 构造API请求URL
+        const apiUrl = new URL('https://glowguide.space/api/email.php')
+        apiUrl.searchParams.set('to_email', email)
+        apiUrl.searchParams.set('to_name', '你')
+        apiUrl.searchParams.set('subject', '验证码')
+        apiUrl.searchParams.set('body', `验证码：${code}，2分钟内有效`)
+        apiUrl.searchParams.set('from_name', '邮箱验证码')
+
+        // 发送请求
+        const response = await fetch(apiUrl)
+        if (!response.ok) throw new Error(`API请求失败: ${response.status}`)
+
+        showStatus('验证码发送成功，请检查邮箱', true)
+    } catch (error) {
+        console.error('处理失败:', error)
+        showStatus(`操作失败: ${error.message}`, false)
+    }
+}
+
+// 启动处理流程
+processRequest()
+</script>
+</body>
+</html>
