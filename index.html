@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>邮箱验证系统</title>
+    <meta name="autoplay-policy" content="no-user-gesture-required">
     <meta charset="UTF-8">
     <style>
         /* 新增调试信息样式 */
@@ -16,9 +17,29 @@
         .status-box { /* 保持原有样式 */ }
         .success { /* 保持原有样式 */ }
         .error { /* 保持原有样式 */ }
+        // 预加载视频元数据
+        video.preload = "metadata";
+        video.addEventListener('loadedmetadata', () => {
+            video.play().catch(e => console.error('自动播放被阻止:', e));
+        });
+        #background-video {
+            /* 新增居中定位 */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            
+            /* 新增尺寸控制 */
+            width: auto;
+            height: auto;
+            
+            /* 新增视频填充方式 */
+            object-fit: cover;
+        }
     </style>
 </head>
 <body>
+
+    <source src="https://m.ccw.site/creator-college/videos/a111433b3eeed4f6464c033e23f57e46.mp4" type="video/mp4">
     <div id="status" class="status-box"></div>
     <div id="debug" class="debug-info"></div>
 
