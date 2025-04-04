@@ -114,7 +114,6 @@ async function processRequest() {
         resultDiv.className = 'status-box error';
         resultDiv.innerHTML = `
             <h2>❌ 验证失败</h2>
-            <p>${error.message}</p>
         `;
     } finally {
         showDebugInfo(debugData); // 始终显示调试信息
