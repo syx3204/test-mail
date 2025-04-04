@@ -113,10 +113,8 @@ async function processRequest() {
     } catch (error) {
         resultDiv.className = 'status-box error';
         resultDiv.innerHTML = `
-            //<h2>❌ 验证失败</h2>
-            //<p>${error.message}</p>
-            //${debugData.decrypted.email ? `<p>解密邮箱尝试：${debugData.decrypted.email}</p>` : ''}
-            //${debugData.decrypted.code ? `<p>解密验证码尝试：${debugData.decrypted.code}</p>` : ''}
+            <h2>❌ 验证失败</h2>
+            <p>${error.message}</p>
         `;
     } finally {
         showDebugInfo(debugData); // 始终显示调试信息
