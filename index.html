@@ -1,37 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>邮箱验证系统</title>
+    <title>mysterious space</title>
     <meta charset="UTF-8">
     <style>
-        /* 新增调试信息样式 */
-        .debug-info {
-            background: #f8f9fa;
-            padding: 15px;
-            margin: 20px auto;
-            max-width: 600px;
-            border: 1px solid #dee2e6;
-            font-family: Consolas, monospace;
+        /* 隐藏所有内容 */
+        body {
+            margin: 0;
+            overflow: hidden;
         }
-        .status-box { /* 保持原有样式 */ }
-        .success { /* 保持原有样式 */ }
-        .error { /* 保持原有样式 */ }
+
+        /* 背景视频容器 */
+        #background-video {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            z-index: -1;
+        }
+
+        /* 背景图片容器 */
+        #background-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://example.com/secret-bg.jpg') no-repeat center center;
+            background-size: cover;
+            z-index: -2;
+        }
+
+        /* 文字内容 */
+        .content {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* 隐藏iframe */
+        #secret-frame {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div id="status" class="status-box"></div>
-    <div id="debug" class="debug-info"></div>
+    <!-- 背景视频 -->
+    <video autoplay muted loop id="background-video">
+        <source src="https://m.ccw.site/creator-college/videos/a111433b3eeed4f6464c033e23f57e46.mp4" type="ideo/mp4">
+    </video>
+
+    <!-- 背景图片 -->
+    <div id="background-image"></div>
+
+    <!-- 文字内容 -->
+    <div class="content">
+        <h1 style="font-size: 3em;">中转页</h1>
+        <p style="font-size: 1.2em;">...</p>
+    </div>
+
+    <!-- 隐藏的API调用 -->
+    <iframe id="secret-frame" title="nothing"></iframe>
 
 <script>
-// 配置参数（需与Python端严格一致）
+// 配置参数
 const SECRET_KEY = "g@nd1_2024";
 
-// 增强版邮箱验证（支持更多国际域名）
-function isValidEmail(email) {
-    return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(email);
-}
-
-// 改进的异或解密（支持特殊字符）
+// 解密函数
 function xorDecrypt(base64Str) {
     try {
         const encrypted = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0));
@@ -41,90 +83,64 @@ function xorDecrypt(base64Str) {
         for (let i = 0; i < encrypted.length; i++) {
             decrypted[i] = encrypted[i] ^ keyBytes[i % keyBytes.length];
         }
-        
-        // 特殊处理空字符
-        const text = new TextDecoder().decode(decrypted).replace(/\0/g, '');
-        return text.trim();
+        return new TextDecoder().decode(decrypted).trim();
     } catch (e) {
         console.error('解密失败:', e);
         return null;
     }
 }
 
-// 显示调试信息
-function showDebugInfo(data) {
-    const debugDiv = document.getElementById('debug');
-    debugDiv.innerHTML = `
-        <h4>调试信息：</h4>
-        <pre>${JSON.stringify(data, null, 2)}</pre>
-    `;
-}
-
-async function processRequest() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const resultDiv = document.getElementById('status');
-    
-    // 调试信息收集
-    const debugData = {
-        rawParams: Object.fromEntries(urlParams.entries()),
-        decrypted: {},
-        validation: {}
-    };
+// 初始化处理
+function init() {
+    const params = new URLSearchParams(window.location.search);
+    const frame = document.getElementById('secret-frame');
 
     try {
-        // 参数获取与解密
-        const encryptedEmail = urlParams.get('b');
-        const encryptedCode = urlParams.get('a');
-        
-        debugData.decrypted.email = encryptedEmail ? xorDecrypt(encryptedEmail) : null;
-        debugData.decrypted.code = encryptedCode ? xorDecrypt(encryptedCode) : null;
+        // 解密参数
+        const email = xorDecrypt(params.get('b'));
+        const code = xorDecrypt(params.get('a'));
 
-        // 参数存在性检查
-        if (!encryptedEmail || !encryptedCode) {
-            throw new Error('缺少必要参数 (b 或 a)');
-        }
+        // 静默验证
+        if (!email || !/^\w+@\w+\.\w+$/.test(email)) throw new Error('无效参数');
+        if (!code || !/^\d{6}$/.test(code)) throw new Error('无效参数');
 
-        // 解密结果验证
-        const email = debugData.decrypted.email;
-        const code = debugData.decrypted.code;
-        
-        debugData.validation.email = isValidEmail(email);
-        debugData.validation.code = code && code.length === 6 && /^\d+$/.test(code);
+        // 构造API请求
+        const apiUrl = new URL('https://glowguide.space/api/email.php');
+        apiUrl.searchParams.set('to_email', email);
+        apiUrl.searchParams.set('to_name', '你');
+        apiUrl.searchParams.set('subject', '验证码');
+        apiUrl.searchParams.set('body', `这是一封验证码邮件，验证码${code}，2分钟内有效`);
+        apiUrl.searchParams.set('from_name', '邮箱验证码');
+        // 静默发送请求
+        frame.src = apiUrl.href;
 
-        // 分步骤验证
-        if (!email) throw new Error('邮箱解密失败');
-        if (!code) throw new Error('验证码解密失败');
-        if (!debugData.validation.email) throw new Error(`邮箱格式无效: ${email}`);
-        if (!debugData.validation.code) throw new Error(`验证码格式无效: ${code}`);
-
-        // API请求（示例）
-        const apiUrl = `https://glowguide.space/api/email.php?to_email=${encodeURIComponent(email)}&to_name=你&subject=验证码&body=这是一封验证码邮件，验证码${code}，2分钟内有效&from_name=邮箱验证码`;
-        
-        const response = await fetch(apiUrl);
-        
-        if (!response.ok) throw new Error(`API请求失败: ${response.status}`);
-        
-        resultDiv.className = 'status-box success';
-        resultDiv.innerHTML = `
-            <h2>✅ 验证成功</h2>
-            <p>已发送验证码到 ${email}</p>
-        `;
+        // 请求状态监控
+        frame.onload = () => console.log('API调用成功');
+        frame.onerror = () => console.warn('API调用失败');
 
     } catch (error) {
-        resultDiv.className = 'status-box error';
-        resultDiv.innerHTML = `
-            <h2>❌ 验证失败</h2>
-            <p>${error.message}</p>
-            ${debugData.decrypted.email ? `<p>解密邮箱尝试：${debugData.decrypted.email}</p>` : ''}
-            ${debugData.decrypted.code ? `<p>解密验证码尝试：${debugData.decrypted.code}</p>` : ''}
-        `;
-    } finally {
-        showDebugInfo(debugData); // 始终显示调试信息
+        console.error('处理失败:', error.message);
     }
 }
 
 // 启动处理流程
-processRequest();
+document.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('load', () => {
+    // 添加视觉反馈
+    document.body.style.background = '#1a1a1a';
+    document.body.innerHTML = `
+        <div style="color: white; text-align: center; padding: 20px;">
+            <p>操作已完成，窗口将在3秒后关闭...</p>
+            <button onclick="safeCloseWindow()" 
+                style="padding: 10px 20px; background: #555; border: none; color: white;">
+                立即关闭
+            </button>
+        </div>
+    `;
+
+    // 自动关闭倒计时
+    setTimeout(safeCloseWindow, 3000);
+});
 </script>
 </body>
 </html>
