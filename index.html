@@ -6,6 +6,37 @@
     <meta charset="UTF-8">
     <style>
         /* 新增调试信息样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 视频容器样式 */
+        #video-bg {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: -1;
+            object-fit: cover;
+        }
+
+        /* 内容容器 */
+        .content {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-family: Arial, sans-serif;
+        }
         .debug-info {
             background: #f8f9fa;
             padding: 15px;
@@ -38,15 +69,20 @@
     </style>
 </head>
 <body>
-
-    <source src="https://m.ccw.site/creator-college/videos/a111433b3eeed4f6464c033e23f57e46.mp4" type="video/mp4">
+    <video autoplay muted loop playsinline id="video-bg">
+        <source src="https://m.ccw.site/creator-college/videos/a111433b3eeed4f6464c033e23f57e46.mp4" type="video/mp4">
+    </video>
     <div id="status" class="status-box"></div>
     <div id="debug" class="debug-info"></div>
 
 <script>
+const video = document.getElementById('video-bg');
 // 配置参数（需与Python端严格一致）
 const SECRET_KEY = "g@nd1_2024";
-
+        document.addEventListener('touchstart', function firstTouch() {
+            video.play();
+            document.removeEventListener('touchstart', firstTouch);
+        });
 // 增强版邮箱验证（支持更多国际域名）
 function isValidEmail(email) {
     return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(email);
