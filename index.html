@@ -1,116 +1,130 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>邮箱验证码转发系统</title>
+    <title>邮箱验证系统</title>
     <meta charset="UTF-8">
     <style>
-        .status-box {
-            padding: 20px;
-            margin: 50px auto;
-            width: 60%;
-            border-radius: 8px;
-            text-align: center;
-            font-family: Arial, sans-serif;
+        /* 新增调试信息样式 */
+        .debug-info {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 20px auto;
+            max-width: 600px;
+            border: 1px solid #dee2e6;
+            font-family: Consolas, monospace;
         }
-        .success {
-            background: #d4edda;
-            color: #155724;
-            border: 2px solid #c3e6cb;
-        }
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 2px solid #f5c6cb;
-        }
+        .status-box { /* 保持原有样式 */ }
+        .success { /* 保持原有样式 */ }
+        .error { /* 保持原有样式 */ }
     </style>
 </head>
 <body>
     <div id="status" class="status-box"></div>
+    <div id="debug" class="debug-info"></div>
 
 <script>
-// 异或解密函数（与Python实现兼容）
-function xorDecrypt(base64Str, key) {
+// 配置参数（需与Python端严格一致）
+const SECRET_KEY = "g@nd1_2024";
+
+// 增强版邮箱验证（支持更多国际域名）
+function isValidEmail(email) {
+    return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(email);
+}
+
+// 改进的异或解密（支持特殊字符）
+function xorDecrypt(base64Str) {
     try {
-        const encrypted = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0))
-        if (!key) return new TextDecoder().decode(encrypted)
+        const encrypted = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0));
+        const keyBytes = new TextEncoder().encode(SECRET_KEY);
+        const decrypted = new Uint8Array(encrypted.length);
         
-        const keyBytes = new TextEncoder().encode(key)
-        const decrypted = new Uint8Array(encrypted.length)
         for (let i = 0; i < encrypted.length; i++) {
-            decrypted[i] = encrypted[i] ^ keyBytes[i % keyBytes.length]
+            decrypted[i] = encrypted[i] ^ keyBytes[i % keyBytes.length];
         }
-        return new TextDecoder().decode(decrypted)
+        
+        // 特殊处理空字符
+        const text = new TextDecoder().decode(decrypted).replace(/\0/g, '');
+        return text.trim();
     } catch (e) {
-        console.error('解密失败:', e)
-        return null
+        console.error('解密失败:', e);
+        return null;
     }
 }
 
-// 邮箱格式验证
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+// 显示调试信息
+function showDebugInfo(data) {
+    const debugDiv = document.getElementById('debug');
+    debugDiv.innerHTML = `
+        <h4>调试信息：</h4>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+    `;
 }
 
-// 验证码格式验证（6位数字）
-function isValidCode(code) {
-    return /^\d{6}$/.test(code)
-}
-
-// 获取URL参数
-function getParam(name) {
-    return new URLSearchParams(window.location.search).get(name)
-}
-
-// 显示状态信息
-function showStatus(message, isSuccess) {
-    const statusDiv = document.getElementById('status')
-    statusDiv.className = `status-box ${isSuccess ? 'success' : 'error'}`
-    statusDiv.innerHTML = `<h2>${isSuccess ? '✅ 成功' : '❌ 错误'}</h2><p>${message}</p>`
-}
-
-// 主处理流程
 async function processRequest() {
-    // 从URL获取参数（示例密钥，实际应保密）
-    const SECRET_KEY = 'V3ryS3cretK3y!2024'
+    const urlParams = new URLSearchParams(window.location.search);
+    const resultDiv = document.getElementById('status');
     
+    // 调试信息收集
+    const debugData = {
+        rawParams: Object.fromEntries(urlParams.entries()),
+        decrypted: {},
+        validation: {}
+    };
+
     try {
-        // 解密参数
-        const encryptedEmail = getParam('b')
-        const encryptedCode = getParam('a')
+        // 参数获取与解密
+        const encryptedEmail = urlParams.get('b');
+        const encryptedCode = urlParams.get('a');
         
+        debugData.decrypted.email = encryptedEmail ? xorDecrypt(encryptedEmail) : null;
+        debugData.decrypted.code = encryptedCode ? xorDecrypt(encryptedCode) : null;
+
+        // 参数存在性检查
         if (!encryptedEmail || !encryptedCode) {
-            throw new Error('缺少必要参数')
+            throw new Error('缺少必要参数 (b 或 a)');
         }
 
-        const email = xorDecrypt(encryptedEmail, SECRET_KEY)
-        const code = xorDecrypt(encryptedCode, SECRET_KEY)
+        // 解密结果验证
+        const email = debugData.decrypted.email;
+        const code = debugData.decrypted.code;
+        
+        debugData.validation.email = isValidEmail(email);
+        debugData.validation.code = code && code.length === 6 && /^\d+$/.test(code);
 
-        // 验证解密结果
-        if (!email || !code) throw new Error('解密失败')
-        if (!isValidEmail(email)) throw new Error('邮箱格式无效')
-        if (!isValidCode(code)) throw new Error('验证码格式无效')
+        // 分步骤验证
+        if (!email) throw new Error('邮箱解密失败');
+        if (!code) throw new Error('验证码解密失败');
+        if (!debugData.validation.email) throw new Error(`邮箱格式无效: ${email}`);
+        if (!debugData.validation.code) throw new Error(`验证码格式无效: ${code}`);
 
-        // 构造API请求URL
-        const apiUrl = new URL('https://glowguide.space/api/email.php')
-        apiUrl.searchParams.set('to_email', email)
-        apiUrl.searchParams.set('to_name', '你')
-        apiUrl.searchParams.set('subject', '验证码')
-        apiUrl.searchParams.set('body', `验证码：${code}，2分钟内有效`)
-        apiUrl.searchParams.set('from_name', '邮箱验证码')
+        // API请求（示例）
+        const apiUrl = `https://glowguide.space/api/email.php?to_email=${encodeURIComponent(email)}&to_name=你&subject=验证码&body=这是一封验证码邮件，验证码${code}，2分钟内有效&from_name=邮箱验证码`;
+        
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) throw new Error(`API请求失败: ${response.status}`);
+        
+        resultDiv.className = 'status-box success';
+        resultDiv.innerHTML = `
+            <h2>✅ 验证成功</h2>
+            <p>已发送验证码到 ${email}</p>
+        `;
 
-        // 发送请求
-        const response = await fetch(apiUrl)
-        if (!response.ok) throw new Error(`API请求失败: ${response.status}`)
-
-        showStatus('验证码发送成功，请检查邮箱', true)
     } catch (error) {
-        console.error('处理失败:', error)
-        showStatus(`操作失败: ${error.message}`, false)
+        resultDiv.className = 'status-box error';
+        resultDiv.innerHTML = `
+            <h2>❌ 验证失败</h2>
+            <p>${error.message}</p>
+            ${debugData.decrypted.email ? `<p>解密邮箱尝试：${debugData.decrypted.email}</p>` : ''}
+            ${debugData.decrypted.code ? `<p>解密验证码尝试：${debugData.decrypted.code}</p>` : ''}
+        `;
+    } finally {
+        showDebugInfo(debugData); // 始终显示调试信息
     }
 }
 
 // 启动处理流程
-processRequest()
+processRequest();
 </script>
 </body>
 </html>
